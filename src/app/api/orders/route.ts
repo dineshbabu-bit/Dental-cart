@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { calculateOrderGST } from "@/lib/gst";
 import { logAuditEvent } from "@/lib/audit";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser();

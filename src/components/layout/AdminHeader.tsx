@@ -22,10 +22,6 @@ export default function AdminHeader({ title }: { title: string }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
   const fetchNotifications = async () => {
     try {
       const res = await fetch("/api/notifications?roleTarget=ADMIN");
@@ -38,6 +34,10 @@ export default function AdminHeader({ title }: { title: string }) {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   const markAllRead = async () => {
     try {
