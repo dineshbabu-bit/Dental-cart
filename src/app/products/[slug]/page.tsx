@@ -16,49 +16,57 @@ export default async function ProductDetailPage({
 }) {
   const { slug } = await params;
 
-  const product = await prisma.product.findFirst({
-    where: {
-      OR: [{ slug }, { id: slug }],
-    },
-    include: {
-      category: true,
-      brand: true,
-      supplier: true,
-      images: { orderBy: { displayOrder: "asc" } },
-      specifications: true,
-      reviews: {
-        where: { isApproved: true },
-        include: {
-          user: {
-            select: {
-              name: true,
-              customerProfile: { select: { profession: true, clinicName: true } },
+  let product: any = null;
+  let relatedProducts: any[] = [];
+
+  try {
+    product = await prisma.product.findFirst({
+      where: {
+        OR: [{ slug }, { id: slug }],
+      },
+      include: {
+        category: true,
+        brand: true,
+        supplier: true,
+        images: { orderBy: { displayOrder: "asc" } },
+        specifications: true,
+        reviews: {
+          where: { isApproved: true },
+          include: {
+            user: {
+              select: {
+                name: true,
+                customerProfile: { select: { profession: true, clinicName: true } },
+              },
             },
           },
+          orderBy: { createdAt: "desc" },
         },
-        orderBy: { createdAt: "desc" },
       },
-    },
-  });
+    });
+
+    if (product) {
+      relatedProducts = await prisma.product.findMany({
+        where: {
+          categoryId: product.categoryId,
+          id: { not: product.id },
+          status: "PUBLISHED",
+        },
+        include: {
+          category: true,
+          brand: true,
+          images: { orderBy: { displayOrder: "asc" } },
+        },
+        take: 4,
+      });
+    }
+  } catch (error) {
+    console.error("[ProductDetailPage] Error fetching product:", error);
+  }
 
   if (!product) {
     notFound();
   }
-
-  // Fetch related products
-  const relatedProducts = await prisma.product.findMany({
-    where: {
-      categoryId: product.categoryId,
-      id: { not: product.id },
-      status: "PUBLISHED",
-    },
-    include: {
-      category: true,
-      brand: true,
-      images: { orderBy: { displayOrder: "asc" } },
-    },
-    take: 4,
-  });
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">

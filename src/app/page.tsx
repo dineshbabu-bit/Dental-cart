@@ -23,44 +23,59 @@ import {
 export const revalidate = 0; // Dynamic server render
 
 export default async function HomePage() {
-  // Fetch homepage data
-  const banners = await prisma.banner.findMany({
-    where: { isActive: true },
-    orderBy: { displayOrder: "asc" },
-  });
+  // Resilient parallel data fetching with graceful error fallback
+  let banners: any[] = [];
+  let categories: any[] = [];
+  let featuredProducts: any[] = [];
+  let bestSellerProducts: any[] = [];
+  let brands: any[] = [];
 
-  const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    include: {
-      _count: { select: { products: { where: { status: "PUBLISHED" } } } },
-    },
-    orderBy: { displayOrder: "asc" },
-  });
+  try {
+    const [bannersData, categoriesData, featuredData, bestSellerData, brandsData] =
+      await Promise.all([
+        prisma.banner.findMany({
+          where: { isActive: true },
+          orderBy: { displayOrder: "asc" },
+        }),
+        prisma.category.findMany({
+          where: { isActive: true },
+          include: {
+            _count: { select: { products: { where: { status: "PUBLISHED" } } } },
+          },
+          orderBy: { displayOrder: "asc" },
+        }),
+        prisma.product.findMany({
+          where: { status: "PUBLISHED", isFeatured: true },
+          include: {
+            category: true,
+            brand: true,
+            images: { orderBy: { displayOrder: "asc" } },
+          },
+          take: 8,
+        }),
+        prisma.product.findMany({
+          where: { status: "PUBLISHED", isBestSeller: true },
+          include: {
+            category: true,
+            brand: true,
+            images: { orderBy: { displayOrder: "asc" } },
+          },
+          take: 8,
+        }),
+        prisma.brand.findMany({
+          where: { isActive: true },
+          take: 10,
+        }),
+      ]);
 
-  const featuredProducts = await prisma.product.findMany({
-    where: { status: "PUBLISHED", isFeatured: true },
-    include: {
-      category: true,
-      brand: true,
-      images: { orderBy: { displayOrder: "asc" } },
-    },
-    take: 8,
-  });
-
-  const bestSellerProducts = await prisma.product.findMany({
-    where: { status: "PUBLISHED", isBestSeller: true },
-    include: {
-      category: true,
-      brand: true,
-      images: { orderBy: { displayOrder: "asc" } },
-    },
-    take: 8,
-  });
-
-  const brands = await prisma.brand.findMany({
-    where: { isActive: true },
-    take: 10,
-  });
+    banners = bannersData;
+    categories = categoriesData;
+    featuredProducts = featuredData;
+    bestSellerProducts = bestSellerData;
+    brands = brandsData;
+  } catch (error) {
+    console.error("[HomePage] Database query failed (verify DATABASE_URL and run npx prisma db push):", error);
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">

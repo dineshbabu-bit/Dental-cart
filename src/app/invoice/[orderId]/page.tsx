@@ -12,26 +12,8 @@ export default async function InvoicePage({
 }) {
   const { orderId } = await params;
 
-  const order = await prisma.order.findFirst({
-    where: {
-      OR: [{ id: orderId }, { orderNumber: orderId }],
-    },
-    include: {
-      items: {
-        include: {
-          product: true,
-        },
-      },
-      payment: true,
-      invoice: true,
-    },
-  });
-
-  if (!order) {
-    notFound();
-  }
-
-  const storeSettings = (await prisma.storeSettings.findUnique({ where: { id: "default" } })) || {
+  let order: any = null;
+  let storeSettings = {
     businessName: "Dental Cart India Pvt. Ltd.",
     tagline: "Your Trusted Dental Supply Partner",
     email: "support@dentalcart.in",
@@ -43,6 +25,34 @@ export default async function InvoicePage({
     gstin: "27AABCB1234F1Z5",
     pan: "AABCB1234F",
   };
+
+  try {
+    order = await prisma.order.findFirst({
+      where: {
+        OR: [{ id: orderId }, { orderNumber: orderId }],
+      },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+        payment: true,
+        invoice: true,
+      },
+    });
+
+    const dbSettings = await prisma.storeSettings.findUnique({ where: { id: "default" } });
+    if (dbSettings) {
+      storeSettings = dbSettings as any;
+    }
+  } catch (error) {
+    console.error("[InvoicePage] Error fetching invoice:", error);
+  }
+
+  if (!order) {
+    notFound();
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4 sm:px-6">

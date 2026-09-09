@@ -9,13 +9,18 @@ import { ArrowRight, Sparkles } from "lucide-react";
 export const revalidate = 0;
 
 export default async function CategoriesPage() {
-  const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    include: {
-      _count: { select: { products: { where: { status: "PUBLISHED" } } } },
-    },
-    orderBy: { displayOrder: "asc" },
-  });
+  let categories: any[] = [];
+  try {
+    categories = await prisma.category.findMany({
+      where: { isActive: true },
+      include: {
+        _count: { select: { products: { where: { status: "PUBLISHED" } } } },
+      },
+      orderBy: { displayOrder: "asc" },
+    });
+  } catch (error) {
+    console.error("[CategoriesPage] Failed to fetch categories:", error);
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
